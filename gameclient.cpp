@@ -16,7 +16,7 @@ void send_msgs(tcp::socket& socket) {
         int key = _getch();
         keyStr = key;
 
-       if (!(key == 'w' || key == 'a' || key == 's' || key == 'd')){
+       if (!(key == 'w' || key == 'a' || key == 's' || key == 'd' || key == 'f')){
             key = _getch();
             keyStr = to_string(key);
        }
@@ -38,27 +38,42 @@ void receive_msgs(tcp::socket& socket) {
     while (true) {
         std::string message;
         boost::asio::streambuf buffer;
-        
-        cout << "receive loop test" << endl;
+
         boost::asio::read_until(socket, buffer, "\n", error);
-        cout << "receive loop test 2" << endl;
-       
+
         if (error == boost::asio::error::eof)
             break; // Connection closed cleanly by peer
         else if (error)
-            throw boost::system::system_error(error); // Other
+            throw boost::system::system_error(error); // Other errors
 
         std::istream is(&buffer);
         std::getline(is, message);
 
-        std::cout << message << std::endl;
+        char arena[9][28]; 
+        message = message + "-+";
+        //cout << message << endl;
+        std::istringstream iss(message);
+        for (int i = 0; i < 9; ++i) {
+            for (int j = 0; j < 28; ++j) {
+                if (!(iss.get(arena[i][j]))) {
+                   // throw std::runtime_error("Invalid data format in received message");
+                   break;
+                }
+            }
+        }
+
+         for (int i = 0; i < 9; ++i) {
+            std::cout << arena[i] << std::endl;
+        }
+
+        std::cout << '\n';
+
     }
+
 }
 
 enum Key { UP = 0, DOWN, LEFT, RIGHT };
 // bool keyPressed[4] = {false, false, false, false};
-
-
 
 int main() {
     try {
