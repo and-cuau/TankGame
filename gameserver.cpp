@@ -12,27 +12,27 @@
 #include <algorithm>
 #include <mutex>
 #include <semaphore>
-
 #include <boost/asio.hpp>
-using boost::asio::ip::tcp;
-
 #include <cstring>
+
+using boost::asio::ip::tcp;
 
 using namespace std;
 
 enum Direction {STATIC = -1, UP = 0, DOWN, LEFT, RIGHT};
 
 void testConnection();
-// void handle_msgs(std::shared_ptr<tcp::socket> socket_ptr, int connect_num); // Pass shared_ptr
-std::string intro();
+std::string intro(); 
 
 // GLOBAL VARIABLES
 std::mutex mtx;
+std::counting_semaphore<2> semaphore{2};
 int bot_num;
 class Bot;
 class Projectile;
 
 std::vector<Bot*> bots;
+std::vector<Projectile*> projectiles;
 std::vector<std::thread> threads;
 std::vector<tcp::socket> sockets;
 
@@ -48,7 +48,6 @@ char arena[9][28] = {
     "+------------------------\n"
 };
 
-
  int positions[4][2] = {
         {1, 2},
         {2, 12},
@@ -58,14 +57,11 @@ char arena[9][28] = {
 
 char letters[4] = {'A', 'B', 'C', 'D'};
 
-int pj = -1;
-int pk = -1;
-
-std::vector<Projectile*> projectiles;
-
 class Bot{
 int health;
 char letter;
+int score;
+
 
 Bot(char letter1, int j, int k){
     letter = letter1;
@@ -74,7 +70,6 @@ Bot(char letter1, int j, int k){
 };
 
 public:
-int weaponOut = 0;
 int j;
 int k;
 Direction direction = Direction::STATIC;
@@ -91,11 +86,7 @@ void attack_up(char arena[9][28]);
 void attack_down(char arena[9][28]);
 void attack_left(char arena[9][28]);
 void attack_right(char arena[9][28]);
-void attack_switch(char arena[9][28]);
 
-
-
-void dec_weapon_out();
 
 static std::vector<std::shared_ptr<boost::asio::ip::tcp::socket>> socket_ptrs;
 
@@ -118,7 +109,7 @@ Projectile(Direction direction, int j, int k){
 };
 
 public:
-int count;
+int count = 0;
 int j, k;
 char letter;
 Direction direction = Direction::STATIC;
@@ -126,69 +117,228 @@ void attack_up(char arena[9][28]);
 void attack_down(char arena[9][28]);
 void attack_left(char arena[9][28]);
 void attack_right(char arena[9][28]);
-void attack_switch(char arena[9][28]);
+void attack_right2(char arena[9][28]);
+void attack_switch();
 
 static Projectile * create_projectile(Direction direction, int j, int k){
     return new Projectile(direction, j, k);
 }
 };
 
-void Bot::dec_weapon_out(){ // j = row. k = column
-   if (weaponOut > 0){
-    weaponOut--;
-   }
-}
+class Missile {
 
+Missile(Direction direction, int j, int k){
+    this->direction = direction;
+    this->j = j;
+    this->k = k;
+};
+
+public:
+int count = 0;
+int j, k;
+char letter;
+Direction direction = Direction::STATIC;
+void attack_up(char arena[9][28]);
+void attack_up_right(char arena[9][28]);
+void attack_right(char arena[9][28]);
+void attack_down_right(char arena[9][28]);
+void attack_down(char arena[9][28]);
+void attack_down_left(char arena[9][28]);
+void attack_left(char arena[9][28]);
+void attack_up_left(char arena[9][28]);
+void attack_switch();
+
+static Missile * create_missile(Direction direction, int j, int k){
+    return new Missile(direction, j, k);
+}
+};
 
 void Bot::move_up(char arena[9][28]){ // j = row. k = column
-     if (arena[j-1][k] != '-'){
-        j--;
-        arena[j][k] = letter;
-        arena[j+1][k] = ' ';
+     char upPos = arena[j-1][k];
+     if (upPos != '-' && upPos != '#'){
+        if (upPos == ' '){
+            std::lock_guard<std::mutex> lock(mtx); 
+            j--;
+            arena[j][k] = letter;
+            arena[j+1][k] = ' ';
+        } 
+        else if (upPos == '$'){
+            semaphore.acquire();
+            j--;
+            arena[j][k] = '*';
+            arena[j+1][k] = ' ';
+            semaphore.release();
+        }
      }
    
 }
 void Bot::move_down(char arena[9][28]){
-    if (arena[j+1][k] != '-'){
-        j++;
-        arena[j][k] = letter; 
-        arena[j-1][k] = ' ';
+    char downPos = arena[j+1][k];
+    if (downPos != '-' && downPos != '#'){
+        if (downPos == ' '){
+            std::lock_guard<std::mutex> lock(mtx); 
+            j++;
+            arena[j][k] = letter; 
+            arena[j-1][k] = ' ';
+        }
+        else if (downPos == '$'){
+            semaphore.acquire();
+            j++;
+            arena[j][k] = '*'; 
+            arena[j-1][k] = ' ';
+            semaphore.release();
+        }
     }
 }
 void Bot::move_left(char arena[9][28]){
-    if (arena[j][k-1] != '|'){
-        k--;
-        arena[j][k] = letter;
-        arena[j][k+1] = ' ';
+    char leftPos = arena[j][k-1];
+    if (leftPos != '|' && leftPos != '#'){
+        if (leftPos == ' '){
+            std::lock_guard<std::mutex> lock(mtx); 
+            k--;
+            arena[j][k] = letter;
+            arena[j][k+1] = ' ';
+        }
+        else if (leftPos == '$'){
+               semaphore.acquire();
+               k--;
+               arena[j][k] = '*'; 
+               arena[j][k+1] = ' ';
+               semaphore.release();
+        }
     }
 }
 void Bot::move_right(char arena[9][28]){
-     if (arena[j][k+1] != '|'){
-        k++;
-        arena[j][k] = letter;
-        arena[j][k-1] = ' ';
+     char rightPos = arena[j][k+1];
+     char currPos = arena[j][k];
+     if (rightPos != '|' && rightPos != '#'){
+        if (rightPos == ' '){
+            std::lock_guard<std::mutex> lock(mtx); 
+            k++;
+            arena[j][k] = letter;
+            // if (currPos == '*'){
+                arena[j][k-1] = ' ';
+            // }
+        }
+        else if(rightPos == '$'){
+              semaphore.acquire();
+              k++;
+              arena[j][k] = '*'; 
+              arena[j][k-1] = ' ';
+              semaphore.release();
+        }
     }
 }
 
 
-void Projectile::attack_up(char arena[9][28]){ // j = row. k = column
-        arena[j-1][k] = '%';
+void Projectile::attack_right(char arena[9][28]){
+
+}
+
+
+
+void Missile::attack_up(char arena[9][28]){ // j = row. k = column
+        cout << "projectile count: " << count << endl;
         j--;
+        if (count>0) {
+            arena[j][k] = '%';
+            arena[j+1][k] = ' ';
+        } else if (count == 0){
+            arena[j][k] = ' '; 
+        } else {
+            // do nothing
+        }
 }
 
-void Projectile::attack_down(char arena[9][28]){ // j = row. k = column
-        arena[j+1][k] = '%';
-        j++;
+void Missile::attack_up_right(char arena[9][28]){ // j = row. k = column
+        cout << "projectile count: " << count << endl;
+        j--; k++;
+        if (count>0) {
+            arena[j][k] = '%';
+            arena[j+1][k-1] = ' ';
+        } else if (count == 0){
+            arena[j][k] = ' '; 
+        } else {
+            // do nothing
+        }
 }
 
-void Projectile::attack_left(char arena[9][28]){ // j = row. k = column
-        arena[j][k-1] = '%';
-        k--;
-}
-
-void Projectile::attack_right(char arena[9][28]){ // j = row. k = column
-        arena[j][k+1] = '%';
+void Missile::attack_right(char arena[9][28]){ // j = row. k = column
+        cout << "projectile count: " << count << endl;
         k++;
+        if (count>0) {
+            arena[j][k] = '%';
+            arena[j][k-1] = ' ';
+        } else if (count == 0){
+            arena[j][k] = ' '; 
+        } else {
+            // do nothing
+        }
+}
+
+void Missile::attack_down_right(char arena[9][28]){ // j = row. k = column
+        cout << "projectile count: " << count << endl;
+        j++; k++;
+        if (count>0) {
+            arena[j][k] = '%';
+            arena[j-1][k-1] = ' ';
+        } else if (count == 0){
+            arena[j][k] = ' '; 
+        } else {
+            // do nothing
+        }
+}
+
+void Missile::attack_down(char arena[9][28]){ // j = row. k = column
+        cout << "projectile count: " << count << endl;
+        j++;
+        if (count>0) {
+            arena[j][k] = '%';
+            arena[j-1][k] = ' ';
+        } else if (count == 0){
+            arena[j][k] = ' '; 
+        } else {
+            // do nothing
+        }
+}
+
+void Missile::attack_down_left(char arena[9][28]){ // j = row. k = column
+        cout << "projectile count: " << count << endl;
+        j++; k--;
+        if (count>0) {
+            arena[j][k] = '%';
+            arena[j-1][k+1] = ' ';
+        } else if (count == 0){
+            arena[j][k] = ' '; 
+        } else {
+            // do nothing
+        }
+}
+
+void Missile::attack_left(char arena[9][28]){ // j = row. k = column
+        cout << "projectile count: " << count << endl;
+        k--;
+        if (count>0) {
+            arena[j][k] = '%';
+            arena[j][k+1] = ' ';
+        } else if (count == 0){
+            arena[j][k] = ' '; 
+        } else {
+            // do nothing
+        }
+}
+
+void Missile::attack_up_left(char arena[9][28]){ // j = row. k = column
+        cout << "projectile count: " << count << endl;
+        j--; k--;
+        if (count>0) {
+            arena[j][k] = '%';
+            arena[j+1][k+1] = ' ';
+        } else if (count == 0){
+            arena[j][k] = ' '; 
+        } else {
+            // do nothing
+        }
 }
 
 
@@ -196,36 +346,16 @@ void Projectile::attack_right(char arena[9][28]){ // j = row. k = column
 void Bot::move_switch(char arena[9][28]){
         switch(direction){
             case 0:
-                if (arena[j-1][k] == '#'){
-                    // std::lock_guard<std::mutex> lock(mtx);
                     move_up(arena);
-                } else{
-                    move_up(arena);
-                }
                 break;
             case 1:
-                 if (arena[j+1][k] == '#'){
-                    //std::lock_guard<std::mutex> lock(mtx);
                     move_down(arena);
-                } else{
-                    move_down(arena);
-                }
                 break;
             case 2:
-                if (arena[j][k-1] == '#'){
-                    //std::lock_guard<std::mutex> lock(mtx);
                     move_left(arena);
-                } else{
-                    move_left(arena);
-                }
                 break;
             case 3:
-                if (arena[j][k+1] == '#'){
-                    //std::lock_guard<std::mutex> lock(mtx);
                     move_right(arena);
-                } else{
-                    move_right(arena);
-                }
                 break;
             default:
                 break;
@@ -247,16 +377,15 @@ void testConnection(){
             int k = positions[connect_num ][1];
             char letter = letters[connect_num];
 
-            // Shared pointer to dynamically allocated socket
-            auto socket_ptr = std::make_shared<tcp::socket>(io_context); // Use shared_ptr here
+            auto socket_ptr = std::make_shared<tcp::socket>(io_context); // Use shared_ptr
             Bot::socket_ptrs.push_back(socket_ptr);
 
             std::cout << "awaiting connection...." << std::endl;
-            acceptor.accept(*socket_ptr);  // Dereference the shared pointer to pass to acceptor
+            acceptor.accept(*socket_ptr);  // Dereference shared pointer
 
             Bot * bot = Bot::create_bot(letter, j, k);
             bots.push_back(bot);
-            
+
             threads.push_back(std::thread([bot, socket_ptr, connect_num]() { // new method. uncomment after tests
                bot->handle_msgs(socket_ptr, connect_num);
             }));
@@ -279,23 +408,20 @@ void testConnection(){
 
 void Bot::obey_command(string message){
          if (message.find('w') != std::string::npos) {
-        // Bot::move_up(arena);
             direction = Direction::UP;
         } else if (message.find('s') != std::string::npos) {
-        //    Bot::move_down(arena);
             direction = Direction::DOWN;
         } else if (message.find('a') != std::string::npos) {
-        // Bot::move_left(arena);
             direction = Direction::LEFT;
         } else if (message.find('d') != std::string::npos) {
-        //    Bot::move_right(arena);
             direction = Direction::RIGHT;
         } else if (message.find('f') != std::string::npos) {
-        //    Bot::move_right(arena);
-            cout << "space received" << endl;
+            cout << "f received" << endl;
             Projectile * proj = Projectile::create_projectile(direction, j, k);
+            proj->count = 5;
+            proj->attack_switch();
             projectiles.push_back(proj);
-
+            direction = Direction::STATIC;
         } else {
             int msg_int = stoi(message);
             if (msg_int == 72) {
@@ -312,7 +438,6 @@ void Bot::obey_command(string message){
                // Bot::move_right(arena);
             } else if (msg_int == 32){
                 cout << "space received" << endl;
-                weaponOut = 2;
             }
         }
 }
@@ -327,10 +452,10 @@ void Bot::handle_msgs(std::shared_ptr<tcp::socket> socket_ptr, int connect_num) 
     
         std::cout << "TEST SERVER-SIDE MESSAGE: " << message<< std::endl;
 
-        mtx.lock();
-        obey_command(message);
-        move_switch(arena);
-        mtx.unlock();
+        //mtx.lock();
+        obey_command(message); //alters bots //alters projectiles
+        move_switch(arena); //alters arena
+        //mtx.unlock();
 
         message = std::to_string(connect_num) + ": " + message + "\n";
         if (error) {
@@ -350,63 +475,52 @@ void Bot::handle_msgs(std::shared_ptr<tcp::socket> socket_ptr, int connect_num) 
             break;
         }
 
-        // int num_sock_ptrs = static_cast<int>(Bot::socket_ptrs.size());
-
-        // cout << message << endl;
-
-         //std::string message2(1, '\0'); // 1024
-         //message2 = "F";
-
     }
 }
 
-void Projectile::attack_switch(char arena[9][28]){
-
+void Projectile::attack_switch(){
     switch(direction){
             case 0:
-                if (arena[j-1][k] == '#'){
-                    // std::lock_guard<std::mutex> lock(mtx);
-                    attack_up(arena);
-                } else{
-                    attack_up(arena);
-                }
+            j--;
                 break;
             case 1:
-                 if (arena[j+1][k] == '#'){
-                    //std::lock_guard<std::mutex> lock(mtx);
-                    attack_down(arena);
-                } else{
-                    attack_down(arena);
-                }
+            j++;
                 break;
             case 2:
-                if (arena[j][k-1] == '#'){
-                    //std::lock_guard<std::mutex> lock(mtx);
-                    attack_left(arena);
-                } else{
-                    attack_left(arena);
-                }
+            k--;
                 break;
             case 3:
-                if (arena[j][k+1] == '#'){
-                    //std::lock_guard<std::mutex> lock(mtx);
-                    attack_right(arena);
-                } else{
-                    attack_right(arena);
-                }
+            k++;
                 break;
             default:
                 break;
         }
 } 
 
+void delete_timed_out_projectiles(std::vector<Projectile*>& projectiles){
+
+    auto condition = [](Projectile* projectile) {
+        return projectile->count < -1;
+    };
+
+    auto it = std::remove_if(projectiles.begin(), projectiles.end(), [&](Projectile* projectile) {
+        if (condition(projectile)) {
+            delete projectile; 
+            return true; 
+        }
+        return false;
+    });
+
+   
+    projectiles.erase(it, projectiles.end());
+
+}
+
 void game_loop(){
     boost::system::error_code ignored_error;
-    int c = 0;
-
-    arena[4][7] = 'X';
+   
     for(;;){
-        std::this_thread::sleep_for(std::chrono::milliseconds(600)); //300
+        std::this_thread::sleep_for(std::chrono::milliseconds(1300)); //300 //600
         
         for (int i = 0; i < 9; ++i) {
             std::cout << arena[i] << std::endl;
@@ -423,8 +537,16 @@ void game_loop(){
         int num_projectiles = projectiles.size();
 
         for (int i = 0; i < num_projectiles; i++){
-            projectiles.at(i)->attack_switch(arena);
+            projectiles.at(i)->attack_right(arena);
+            projectiles.at(i)->count--;
         }
+
+        delete_timed_out_projectiles(projectiles);
+
+        int num_projectiles2 = projectiles.size();
+
+        cout << "the num projs after deleting timed out ones: " << num_projectiles2 << endl;
+
 
         for (int i = 0; i < num_sock_ptrs; i++){
             try{
@@ -435,10 +557,12 @@ void game_loop(){
             }
         }
 
-         c++;
 
     }
 }
+
+
+
 
 using boost::asio::ip::tcp;
 int main(int argc, char* argv[]) { 
