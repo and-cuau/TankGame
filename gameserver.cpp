@@ -26,22 +26,24 @@ std::string intro();
 
 // GLOBAL VARIABLES
 std::mutex mtx;
-std::counting_semaphore<2> semaphore{2};
+std::counting_semaphore<1> semaphore{1};
 int bot_num;
 class Bot;
 class Projectile;  // not forward declaring these caused weird error  error: request for member 'push_back' in 'missiles', which is of non-clas type 'int'424 |missiles.push_back(missile);
 class Missile;
+class Item;
 
 std::vector<Bot*> bots;
 std::vector<Projectile*> projectiles;
 std::vector<Missile*> missiles;
 std::vector<std::thread> threads;
 std::vector<tcp::socket> sockets;
+std::vector<Item*> items;
 
 char arena[9][28] = {
     "+-------------------------+", //0    2,1
     "| A      #         $     |", // 1
-    "|    ###    B            |", // 2
+    "|  ! ###    B            |", // 2
     "|         ###            |", // 3
     "|   $       #      C     |",
     "|                       #|",
@@ -161,6 +163,38 @@ static Missile * create_missile(int direction, int j, int k){
 }
 };
 
+
+class Item {
+
+Item(int j, int k){
+    this->j = j;
+    this->k = k;
+};
+
+
+int j, k;
+public:
+
+static Item * create_item(int j, int k){
+    return new Item(j, k);
+}
+
+
+void blink();
+void unblink();
+
+};
+
+
+void Item::blink(){
+    arena[j][k] = '$';
+}
+
+void Item::unblink(){
+    arena[j][k] = '-';
+}
+
+
 void Bot::move_up(){ // j = row. k = column
      char upPos = arena[j-1][k];
      if (upPos != '-' && upPos != '#'){
@@ -193,6 +227,12 @@ void Bot::move_down(){
             semaphore.acquire();
             j++;
             arena[j][k] = '*'; 
+            arena[j-1][k] = ' ';
+            semaphore.release();
+        } else if ( downPos == 'L') {
+            semaphore.acquire();
+            j++;
+            arena[j][k] = '!'; 
             arena[j-1][k] = ' ';
             semaphore.release();
         }
@@ -238,7 +278,6 @@ void Bot::move_right(){
     }
 }
 
-
 void Bot::cycle_turret_right(){
     turretDirection = (turretDirection + 1) % 8;
 }
@@ -248,7 +287,6 @@ void Bot::cycle_turret_left(){
 }
 
 void Projectile::attack_right(){
-    
     if (count > -1){
         arena[j][k] = '*';
     } else{
@@ -259,14 +297,15 @@ void Projectile::attack_right(){
 
 void Missile::attack_up(){ // j = row. k = column   // 0
         cout << "projectile count: " << count << endl;
-       
         if (count>0) {
-             j--;
-            arena[j][k] = '*';
-            arena[j+1][k] = ' ';
-
             if (arena[j-1][k] == '-' || arena[j-1][k] == '#'){
                 direction = 4;
+            } else {
+                j--;
+                arena[j][k] = '*';
+                if (count < 25){
+                    arena[j+1][k] = ' ';
+                }
             }
 
         } else if (count < 1){
@@ -289,9 +328,10 @@ void Missile::attack_up_right(){ // j = row. k = column  // 1
             else {
                  j--; k++;
                  arena[j][k] = '*';
-                 arena[j+1][k-1] = ' ';
+                 if (count < 25){
+                    arena[j+1][k-1] = ' ';
+                 }
             }
-
 
         } else if (count < 1){
             arena[j][k] = ' '; 
@@ -304,11 +344,14 @@ void Missile::attack_right(){ // j = row. k = column    // 2
         cout << "projectile count: " << count << endl;
         
         if (count>0) {
-            k++;
-            arena[j][k] = '*';
-            arena[j][k-1] = ' ';
             if (arena[j][k+1] == '|' || arena[j][k+1] == '#'){
                 direction = 6;
+            } else {
+                 k++;
+                 arena[j][k] = '*';
+                 if (count < 25){
+                    arena[j][k-1] = ' ';
+                 }
             }
         } else if (count < 1){
             arena[j][k] = ' '; 
@@ -330,7 +373,9 @@ void Missile::attack_down_right(){ // j = row. k = column // 3
             } else {
                 j++; k++;
                 arena[j][k] = '*';
-                arena[j-1][k-1] = ' ';
+                 if (count < 25){
+                    arena[j-1][k-1] = ' ';
+                 }
             }
 
 
@@ -346,12 +391,15 @@ void Missile::attack_down(){ // j = row. k = column // 4
         cout << "projectile count: " << count << endl;
         
         if (count>0) {
-            j++;
-            arena[j][k] = '*';
-            arena[j-1][k] = ' ';
 
             if (arena[j+1][k] == '-' || arena[j+1][k] == '#'){
                 direction = 0;
+            } else {
+                j++;
+                arena[j][k] = '*';
+                 if (count < 25){
+                    arena[j-1][k] = ' ';
+                 }
             }
 
         } else if (count < 1){
@@ -365,13 +413,16 @@ void Missile::attack_down_left(){ // j = row. k = column // 5
         cout << "projectile count: " << count << endl;
         
         if (count>0) {
-            j++; k--;
-            arena[j][k] = '*';
-            arena[j-1][k+1] = ' ';
             if (arena[j+1][k-1] == '-' || arena[j+1][k-1] == '#'){
                 direction = 7;
             } else if (arena[j+1][k-1] == '|' || arena[j+1][k-1] == '#'){
                 direction = 3;
+            } else {
+                j++; k--;
+                arena[j][k] = '*';
+                 if (count < 25){
+                arena[j-1][k+1] = ' ';
+                 }
             }
 
         } else if (count < 1){
@@ -385,13 +436,16 @@ void Missile::attack_left(){ // j = row. k = column // 6
         cout << "projectile count: " << count << endl;
        
         if (count>0) {
-            k--;
-            arena[j][k] = '*';
-            arena[j][k+1] = ' ';
+            
             if (arena[j][k-1] == '|' || arena[j][k-1] == '#'){
                 direction = 2;
+            } else{
+                k--;
+                arena[j][k] = '*';
+                if (count < 25){
+                    arena[j][k+1] = ' ';
+                }
             }
-
 
         } else if (count < 1){
             arena[j][k] = ' '; 
@@ -404,13 +458,16 @@ void Missile::attack_up_left(){ // j = row. k = column // 7
         cout << "projectile count: " << count << endl;
         
         if (count>0) {
-            j--; k--;
-            arena[j][k] = '*';
-            arena[j+1][k+1] = ' ';
             if (arena[j-1][k-1] == '-' || arena[j-1][k-1] == '#'){
                 direction = 5;
             } else if (arena[j-1][k-1] == '|' || arena[j-1][k-1] == '#'){
                 direction = 1;
+            } else {
+                j--; k--;
+                arena[j][k] = '*';
+                if (count < 25){
+                arena[j+1][k+1] = ' ';
+                }
             }
         } else if (count < 1){
             arena[j][k] = ' '; 
@@ -613,7 +670,6 @@ void Missile::attack_switch(){
 } 
 
 void delete_timed_out_projectiles(std::vector<Projectile*>& projectiles){
-
     auto condition = [](Projectile* projectile) {
         return projectile->count < 1;
     };
@@ -650,12 +706,30 @@ void delete_timed_out_missiles(std::vector<Missile*>& missiles){
 
 }
 
+void test_semaphore(){
+    for(;;){
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        semaphore.acquire();
+        int num_items = items.size();
+
+        for (int i = 0; i < num_items; i++){
+            items.at(i)->blink();
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        
+        for (int i = 0; i < num_items; i++){
+            items.at(i)->unblink();
+        }
+        semaphore.release();
+    }
+}
 
 void game_loop(){
     boost::system::error_code ignored_error;
    
     for(;;){
-        std::this_thread::sleep_for(std::chrono::milliseconds(1300)); //300 //600 /1300
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //300 //600 /1300
         
         for (int i = 0; i < 9; ++i) {
             std::cout << arena[i] << std::endl;
@@ -705,18 +779,26 @@ void game_loop(){
 }
 
 
-
-
 using boost::asio::ip::tcp;
 int main(int argc, char* argv[]) { 
 
     std::string response;
     std::cout << "\nServer has been initialized successfully and is now ready to accept connections.\n";
 
+    Item * item = Item::create_item(4, 4);
+    items.push_back(item);
+    Item * item2 = Item::create_item(1, 19);
+    items.push_back(item2);
+    Item * item3 = Item::create_item(7, 10);
+    items.push_back(item3);
+
     thread game_thread(game_loop);
+
+    thread test_sem(test_semaphore);
    
     testConnection();
 
+    test_sem.join();
     game_thread.join();
 
     return 0; 
