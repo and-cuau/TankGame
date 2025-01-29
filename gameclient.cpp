@@ -7,6 +7,9 @@
 using boost::asio::ip::tcp;
 using namespace std;
 
+const int ARENA_HEIGHT = 11;
+const int ARENA_WIDTH = 29;
+
 void send_msgs(tcp::socket& socket) {
     boost::system::error_code error;
     std::string testmsg;
@@ -49,12 +52,12 @@ void receive_msgs(tcp::socket& socket) {
         std::istream is(&buffer);
         std::getline(is, message);
 
-        char arena[9][28]; 
+        char arena[ARENA_HEIGHT][ARENA_WIDTH]; 
         message = message + "-+";
         //cout << message << endl;
         std::istringstream iss(message);
-        for (int i = 0; i < 9; ++i) {
-            for (int j = 0; j < 28; ++j) {
+        for (int i = 0; i < ARENA_HEIGHT; ++i) {
+            for (int j = 0; j < ARENA_WIDTH; ++j) {
                 if (!(iss.get(arena[i][j]))) {
                    // throw std::runtime_error("Invalid data format in received message");
                    break;
@@ -62,7 +65,7 @@ void receive_msgs(tcp::socket& socket) {
             }
         }
 
-         for (int i = 0; i < 9; ++i) {
+         for (int i = 0; i < ARENA_HEIGHT; ++i) {
             std::cout << arena[i] << std::endl;
         }
 
