@@ -160,8 +160,6 @@ int charToInt(char c) {
 }
 
 
-
-
 class Projectile {
 
 Projectile(Direction direction, int j, int k){
@@ -347,10 +345,68 @@ void Tank::cycle_turret_left(){
 }
 
 void Projectile::attack_right(){
-    if (count > -1){
+    if (count > 3){
         arena[j][k] = '*';
-    } else{
-        arena[j][k] = '*';
+    } else if (count > 2){
+
+
+        if (std::isalpha(arena[j-1][k])) { // Up
+            tanks.at(charToInt(arena[j-1][k]))->health--;
+        }
+        if (std::isalpha(arena[j-1][k+1])) { // UpRight
+            tanks.at(charToInt(arena[j-1][k+1]))->health--;
+        }
+        if (std::isalpha(arena[j][k+1])) { // Right
+            tanks.at(charToInt(arena[j][k+1]))->health--;
+        }
+        if (std::isalpha(arena[j+1][k+1])) { // DownRight
+            tanks.at(charToInt(arena[j+1][k+1]))->health--;
+        }
+        if (std::isalpha(arena[j+1][k])) { // Down
+            tanks.at(charToInt(arena[j+1][k]))->health--;
+        }
+        if (std::isalpha(arena[j+1][k-1])) { // DownLeft
+            tanks.at(charToInt(arena[j+1][k-1]))->health--;
+        }
+        if (std::isalpha(arena[j][k-1])) { // Left
+            tanks.at(charToInt(arena[j][k-1]))->health--;
+        }
+        if (std::isalpha(arena[j-1][k-1])) { // Up Left
+            tanks.at(charToInt(arena[j-1][k-1]))->health--;
+        }
+
+        arena[j-1][k] = '%';
+        arena[j-1][k+1] = '%';
+        arena[j][k+1] = '%';
+        arena[j+1][k+1] = '%';
+        arena[j+1][k] = '%';
+        arena[j+1][k-1] = '%';
+        arena[j][k-1] = '%';
+        arena[j-1][k-1] = '%';
+
+
+        if (std::isalpha(arena[j-1][k])){
+             tanks.at(charToInt(arena[j-1][k]))->health--;
+        }
+
+
+
+
+
+
+
+
+
+    }
+    else if (count > 1){
+         arena[j-1][k] = ' ';
+        arena[j-1][k+1] = ' ';
+        arena[j][k+1] = ' ';
+        arena[j+1][k+1] = ' ';
+        arena[j+1][k] = ' ';
+        arena[j+1][k-1] = ' ';
+        arena[j][k-1] = ' ';
+        arena[j-1][k-1] = ' ';
     }
 
 }
@@ -373,7 +429,7 @@ void Missile::attack_up(){ // j = row. k = column   // 0
             if (std::isalpha(arena[j-1][k])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j-1][k]))->k = 8;
+                tanks.at(charToInt(arena[j-1][k]))->health--;
             }
             else if (arena[j-1][k] == '-' || arena[j-1][k] == '#'){
                 direction = 4;
@@ -691,7 +747,7 @@ void Tank::obey_command(string message){
         } else if (message.find('f') != std::string::npos) {
             cout << "f received" << endl;
             Projectile * proj = Projectile::create_projectile(direction, j, k);
-            proj->count = 5;
+            proj->count = 10;
             proj->attack_switch();
             projectiles.push_back(proj);
             direction = Direction::STATIC;
@@ -756,15 +812,16 @@ void Tank::handle_msgs(std::shared_ptr<tcp::socket> socket_ptr, int connect_num)
 void Projectile::attack_switch(){
     switch(direction){
             case 0:
-                break;
-            case 1:
             j++;
                 break;
+            case 1:
+            j--;
+                break;
             case 2:
-            k--;
+            k++;
                 break;
             case 3:
-            k++;
+            k--;
                 break;
             default:
                 break;
@@ -900,8 +957,8 @@ void game_loop(){
         int num_projectiles = projectiles.size();
 
         for (int i = 0; i < num_projectiles; i++){
-            projectiles.at(i)->attack_right();
             projectiles.at(i)->count--;
+            projectiles.at(i)->attack_right();
         }
 
         int num_missiles = missiles.size();
