@@ -28,7 +28,7 @@ void access_item(int & j, int & k);
 std::mutex mtx;
 // std::counting_semaphore<1> semaphore{1}; //max // initial
 int tank_num;
-const int ARENA_HEIGHT = 11; // 9/28 originally
+const int ARENA_HEIGHT = 12; // 9/28 originally
 const int ARENA_WIDTH = 29;
 
 class Tank;
@@ -47,25 +47,34 @@ std::vector<Item*> items;
 //"+-------------------------+"
 //"                           "
 char arena[ARENA_HEIGHT][ARENA_WIDTH] = {
-    "                           ",
-    "+-------------------------+", //0    2,1
-    "| A      #         $      |", // 1
-    "|  ! ###    B       ###   |", // 2
-    "|         ###             |", // 3
-    "|   $       #      C  #   |",
-    "|                     #   |",
-    "|       ###               |",
-    "|  D      $      ##       |",
+    "                           ", //0
+    "+-------------------------+", //1    
+    "|                         |", //2
+    "| A      #                |", //3
+    "|  ! ###    B       ###   |", //4
+    "|         ###             |", //5
+    "|   $       #      C  #   |", //6
+    "|                  $  #   |", //7
+    "|       ###               |", //8
+    "|  D      $      ##       |", //9
     "|                         |",
     "+-------------------------\n"
 };
 
- int positions[4][2] = {
-        {2, 2}, // y, x
-        {3, 12},
-        {5, 20},
-        {8, 3}
+ int tank_positions[4][2] = {
+        {3, 2}, // y, x
+        {4, 12},
+        {6, 19},
+        {9, 3}
     };
+
+
+int item_positions[4][2] = {
+        {6, 4}, // y, x
+        {7, 19},
+        {9, 10}
+};
+
 
 char letters[4] = {'A', 'B', 'C', 'D'};
 
@@ -106,6 +115,7 @@ void attack_right();
 static std::vector<std::shared_ptr<boost::asio::ip::tcp::socket>> socket_ptrs;
 
 void set_direction(){ 
+     cout << "turret direction: " << turretDirection << endl;
      switch(turretDirection){
             case 0:
             arena[0][0] = 'N'; arena[0][1] = ' ';
@@ -153,6 +163,17 @@ static Tank * create_tank(char letter, int j, int k){
 }
 
 };  // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS
+
+// Tank* findTankByLetter(char search_letter) {
+//     auto it = std::find_if(tanks.begin(), tanks.end(),
+//                            [search_letter](const Tank& t) { return t.letter == search_letter; });
+
+//     if (it != tanks.end()) {
+//         return &(*it);  // Return a pointer to the found Tank
+//     }
+
+//     return nullptr;  // Return nullptr if not found
+// }
 
 
 int charToInt(char c) {
@@ -340,7 +361,7 @@ void Tank::cycle_turret_right(){
 }
 
 void Tank::cycle_turret_left(){
-    turretDirection = (turretDirection - 1) % 8;
+    turretDirection = (turretDirection - 1 + 8) % 8;
     Tank::set_direction();
 }
 
@@ -348,52 +369,86 @@ void Projectile::attack_right(){
     if (count > 3){
         arena[j][k] = '*';
     } else if (count > 2){
+       if (std::isalpha(arena[j-1][k])) { // Up
+    try {
+        tanks.at(charToInt(arena[j-1][k]))->health--;
+    } catch (const std::out_of_range& e) {
+        // Handle the out-of-bounds access, e.g., log the error or do nothing
+        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    }
+} else {
+    arena[j-1][k] = '%';
+}
 
+if (std::isalpha(arena[j-1][k+1])) { // UpRight
+    try {
+        tanks.at(charToInt(arena[j-1][k+1]))->health--;
+    } catch (const std::out_of_range& e) {
+        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    }
+} else {
+    arena[j-1][k+1] = '%';
+}
 
-        if (std::isalpha(arena[j-1][k])) { // Up
-            tanks.at(charToInt(arena[j-1][k]))->health--;
-        }
-        if (std::isalpha(arena[j-1][k+1])) { // UpRight
-            tanks.at(charToInt(arena[j-1][k+1]))->health--;
-        }
-        if (std::isalpha(arena[j][k+1])) { // Right
-            tanks.at(charToInt(arena[j][k+1]))->health--;
-        }
-        if (std::isalpha(arena[j+1][k+1])) { // DownRight
-            tanks.at(charToInt(arena[j+1][k+1]))->health--;
-        }
-        if (std::isalpha(arena[j+1][k])) { // Down
-            tanks.at(charToInt(arena[j+1][k]))->health--;
-        }
-        if (std::isalpha(arena[j+1][k-1])) { // DownLeft
-            tanks.at(charToInt(arena[j+1][k-1]))->health--;
-        }
-        if (std::isalpha(arena[j][k-1])) { // Left
-            tanks.at(charToInt(arena[j][k-1]))->health--;
-        }
-        if (std::isalpha(arena[j-1][k-1])) { // Up Left
-            tanks.at(charToInt(arena[j-1][k-1]))->health--;
-        }
+if (std::isalpha(arena[j][k+1])) { // Right
+    try {
+        tanks.at(charToInt(arena[j][k+1]))->health--;
+    } catch (const std::out_of_range& e) {
+        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    }
+} else {
+    arena[j][k+1] = '%';
+}
 
-        arena[j-1][k] = '%';
-        arena[j-1][k+1] = '%';
-        arena[j][k+1] = '%';
-        arena[j+1][k+1] = '%';
-        arena[j+1][k] = '%';
-        arena[j+1][k-1] = '%';
-        arena[j][k-1] = '%';
-        arena[j-1][k-1] = '%';
+if (std::isalpha(arena[j+1][k+1])) { // DownRight
+    try {
+        tanks.at(charToInt(arena[j+1][k+1]))->health--;
+    } catch (const std::out_of_range& e) {
+        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    }
+} else {
+    arena[j+1][k+1] = '%';
+}
 
+if (std::isalpha(arena[j+1][k])) { // Down
+    try {
+        tanks.at(charToInt(arena[j+1][k]))->health--;
+    } catch (const std::out_of_range& e) {
+        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    }
+} else {
+    arena[j+1][k] = '%';
+}
 
-        if (std::isalpha(arena[j-1][k])){
-             tanks.at(charToInt(arena[j-1][k]))->health--;
-        }
+if (std::isalpha(arena[j+1][k-1])) { // DownLeft
+    try {
+        tanks.at(charToInt(arena[j+1][k-1]))->health--;
+    } catch (const std::out_of_range& e) {
+        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    }
+} else {
+    arena[j+1][k-1] = '%';
+}
 
+if (std::isalpha(arena[j][k-1])) { // Left
+    try {
+        tanks.at(charToInt(arena[j][k-1]))->health--;
+    } catch (const std::out_of_range& e) {
+        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    }
+} else {
+    arena[j][k-1] = '%';
+}
 
-
-
-
-
+if (std::isalpha(arena[j-1][k-1])) { // UpLeft
+    try {
+        tanks.at(charToInt(arena[j-1][k-1]))->health--;
+    } catch (const std::out_of_range& e) {
+        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    }
+} else {
+    arena[j-1][k-1] = '%';
+}
 
 
 
@@ -511,7 +566,7 @@ void Missile::attack_right(){ // j = row. k = column    // 2
 }
 
 void Missile::attack_down_right(){ // j = row. k = column // 3
-        cout << "projectile count: " << count << endl;
+        cout << "DOWN RIGHT " << count << endl;
         
         if (count>0) {
             cout <<"next space: "<< arena[j+1][k+1] << endl;
@@ -523,7 +578,7 @@ void Missile::attack_down_right(){ // j = row. k = column // 3
             } 
             else if (arena[j+1][k] == '-' || arena[j+1][k] == '#'){
                 direction = 1;
-            } else if (arena[j+1][k] == ' ' || arena[j+1][k+1] == '#'){
+            } else if (arena[j+1][k] == ' ' && arena[j+1][k+1] == '#'){
                 direction = 7;
             }
             else if (arena[j+1][k+1] == '|' || arena[j+1][k+1] == '#'){
@@ -585,7 +640,7 @@ void Missile::attack_down_left(){ // j = row. k = column // 5
             else if (arena[j+1][k-1] == '-' || arena[j+1][k-1] == '#'){
                 direction = 7;
             } 
-            else if (arena[j+1][k-1] == '#' || arena[j+1][k] == ' '){ // hits corner dead on
+            else if (arena[j+1][k-1] == '#' && arena[j+1][k] == ' '){ // hits corner dead on
                 direction = 1;
             }            
             else if (arena[j+1][k-1] == '|' || arena[j+1][k-1] == '#'){
@@ -696,8 +751,8 @@ void testConnection(){
         tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), PORT));
         int connect_num = 0;
         for(;;){
-            int j = positions[connect_num][0];
-            int k = positions[connect_num ][1];
+            int j = tank_positions[connect_num][0];
+            int k = tank_positions[connect_num ][1];
             char letter = letters[connect_num];
 
             auto socket_ptr = std::make_shared<tcp::socket>(io_context); // Use shared_ptr
@@ -940,8 +995,7 @@ void game_loop(){
     boost::system::error_code ignored_error;
    
     for(;;){
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //300 //600 /1300
-        
+        std::this_thread::sleep_for(std::chrono::milliseconds(800)); // was 1000
         for (int i = 0; i < ARENA_HEIGHT; ++i) {
             std::cout << arena[i] << std::endl;
         }
@@ -1007,12 +1061,13 @@ int main(int argc, char* argv[]) {
     std::string response;
     std::cout << "\nServer has been initialized successfully and is now ready to accept connections.\n";
 
-    Item * item = Item::create_item(5, 4);
-    items.push_back(item);
-    Item * item2 = Item::create_item(2, 19);
-    items.push_back(item2);
-    Item * item3 = Item::create_item(8, 10);
-    items.push_back(item3);
+
+    int num_positions = sizeof(item_positions) / sizeof(item_positions[0]);
+    
+    for (int i = 0; i < num_positions; i++){
+        Item * item = Item::create_item(item_positions[i][0], item_positions[i][1]);
+        items.push_back(item);
+    }
 
     thread game_thread(game_loop);
 

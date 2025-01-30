@@ -7,7 +7,7 @@
 using boost::asio::ip::tcp;
 using namespace std;
 
-const int ARENA_HEIGHT = 11;
+const int ARENA_HEIGHT = 12;
 const int ARENA_WIDTH = 29;
 
 void send_msgs(tcp::socket& socket) {
