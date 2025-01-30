@@ -1,4 +1,4 @@
-# Battle Bots
+# Tank Game
 Tanks in C++.  Designed for demonstration purposes, the program currently supports multiplayer mode on a single computer.
 
 ## Prerequisites
