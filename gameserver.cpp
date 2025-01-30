@@ -32,12 +32,12 @@ const int ARENA_HEIGHT = 12; // 9/28 originally
 const int ARENA_WIDTH = 29;
 
 class Tank;
-class Projectile;  // not forward declaring these caused weird error  error: request for member 'push_back' in 'missiles', which is of non-clas type 'int'424 |missiles.push_back(missile);
+class Bomb;  // not forward declaring these caused weird error  error: request for member 'push_back' in 'missiles', which is of non-clas type 'int'424 |missiles.push_back(missile);
 class Missile;
 class Item;
 
 std::vector<Tank*> tanks;
-std::vector<Projectile*> projectiles;
+std::vector<Bomb*> bombs;
 std::vector<Missile*> missiles;
 std::vector<std::thread> threads;
 std::vector<tcp::socket> sockets;
@@ -181,9 +181,9 @@ int charToInt(char c) {
 }
 
 
-class Projectile {
+class Bomb {
 
-Projectile(Direction direction, int j, int k){
+Bomb(Direction direction, int j, int k){
     this->direction = direction;
     this->j = j;
     this->k = k;
@@ -201,8 +201,8 @@ void attack_right();
 void attack_right2();
 void attack_switch();
 
-static Projectile * create_projectile(Direction direction, int j, int k){
-    return new Projectile(direction, j, k);
+static Bomb * create_bomb(Direction direction, int j, int k){
+    return new Bomb(direction, j, k);
 }
 };
 
@@ -365,7 +365,7 @@ void Tank::cycle_turret_left(){
     Tank::set_direction();
 }
 
-void Projectile::attack_right(){
+void Bomb::attack_right(){
     if (count > 3){
         arena[j][k] = '*';
     } else if (count > 2){
@@ -477,7 +477,7 @@ int num_tanks = tanks.size();
 }
 
 void Missile::attack_up(){ // j = row. k = column   // 0
-        cout << "projectile count: " << count << endl;
+        cout << "bomb count: " << count << endl;
 
          if (count>0) {
             
@@ -506,7 +506,7 @@ void Missile::attack_up(){ // j = row. k = column   // 0
 }
 
 void Missile::attack_up_right(){ // j = row. k = column  // 1
-        cout << "projectile count: " << count << endl;
+        cout << "bomb count: " << count << endl;
 
         if (count>0) {
             
@@ -541,7 +541,7 @@ void Missile::attack_up_right(){ // j = row. k = column  // 1
 }
 
 void Missile::attack_right(){ // j = row. k = column    // 2
-        cout << "projectile count: " << count << endl;
+        cout << "bomb count: " << count << endl;
         
         if (count>0) {
             if (std::isalpha(arena[j][k+1])) {
@@ -598,8 +598,9 @@ void Missile::attack_down_right(){ // j = row. k = column // 3
         }
 }
 
+
 void Missile::attack_down(){ // j = row. k = column // 4
-        cout << "projectile count: " << count << endl;
+        cout << "bomb count: " << count << endl;
         
         if (count>0) {
             
@@ -613,11 +614,8 @@ void Missile::attack_down(){ // j = row. k = column // 4
             } else {
                 j++;
                 arena[j][k] = '*';
-                char letter = check_clear(j-1, k);
-                 if (count < 25 && letter == 'X'){
+                 if (count < 25){
                     arena[j-1][k] = ' ';
-                 } else{
-                    arena[j+1][k] = letter;
                  }
             }
 
@@ -629,7 +627,7 @@ void Missile::attack_down(){ // j = row. k = column // 4
 }
 
 void Missile::attack_down_left(){ // j = row. k = column // 5
-        cout << "projectile count: " << count << endl;
+        cout << "bomb count: " << count << endl;
         
         if (count>0) {
             if (std::isalpha(arena[j+1][k-1])) {
@@ -661,7 +659,7 @@ void Missile::attack_down_left(){ // j = row. k = column // 5
 }
 
 void Missile::attack_left(){ // j = row. k = column // 6
-        cout << "projectile count: " << count << endl;
+        cout << "bomb count: " << count << endl;
        
         if (count>0) {
             if (std::isalpha(arena[j][k-1])) {
@@ -687,7 +685,7 @@ void Missile::attack_left(){ // j = row. k = column // 6
 }
 
 void Missile::attack_up_left(){ // j = row. k = column // 7
-        cout << "projectile count: " << count << endl;
+        cout << "bomb count: " << count << endl;
         
         if (count>0) {
 
@@ -801,10 +799,10 @@ void Tank::obey_command(string message){
             direction = Direction::STATIC;
         } else if (message.find('f') != std::string::npos) {
             cout << "f received" << endl;
-            Projectile * proj = Projectile::create_projectile(direction, j, k);
+            Bomb * proj = Bomb::create_bomb(direction, j, k);
             proj->count = 10;
             proj->attack_switch();
-            projectiles.push_back(proj);
+            bombs.push_back(proj);
             direction = Direction::STATIC;
         } else {
             int msg_int = stoi(message);
@@ -838,7 +836,7 @@ void Tank::handle_msgs(std::shared_ptr<tcp::socket> socket_ptr, int connect_num)
         std::cout << "TEST SERVER-SIDE MESSAGE: " << message << std::endl;
 
         //mtx.lock();
-        obey_command(message); //alters tanks //alters projectiles
+        obey_command(message); //alters tanks //alters bombs
         move_switch(); //alters arena
         //mtx.unlock();
 
@@ -864,7 +862,7 @@ void Tank::handle_msgs(std::shared_ptr<tcp::socket> socket_ptr, int connect_num)
     socket_ptr->close();
 }
 
-void Projectile::attack_switch(){
+void Bomb::attack_switch(){
     switch(direction){
             case 0:
             j++;
@@ -914,21 +912,21 @@ void Missile::attack_switch(){
         }
 } 
 
-void delete_timed_out_projectiles(std::vector<Projectile*>& projectiles){
-    auto condition = [](Projectile* projectile) {
-        return projectile->count < 1;
+void delete_timed_out_bombs(std::vector<Bomb*>& bombs){
+    auto condition = [](Bomb* bomb) {
+        return bomb->count < 1;
     };
 
-    auto it = std::remove_if(projectiles.begin(), projectiles.end(), [&](Projectile* projectile) {
-        if (condition(projectile)) {
-            delete projectile; 
+    auto it = std::remove_if(bombs.begin(), bombs.end(), [&](Bomb* bomb) {
+        if (condition(bomb)) {
+            delete bomb; 
             return true; 
         }
         return false;
     });
 
    
-    projectiles.erase(it, projectiles.end());
+    bombs.erase(it, bombs.end());
 
 }
 
@@ -1008,11 +1006,11 @@ void game_loop(){
 
        //  cout << num_tanks << endl;
 
-        int num_projectiles = projectiles.size();
+        int num_bombs = bombs.size();
 
-        for (int i = 0; i < num_projectiles; i++){
-            projectiles.at(i)->count--;
-            projectiles.at(i)->attack_right();
+        for (int i = 0; i < num_bombs; i++){
+            bombs.at(i)->count--;
+            bombs.at(i)->attack_right();
         }
 
         int num_missiles = missiles.size();
@@ -1028,12 +1026,12 @@ void game_loop(){
             missiles.at(i)->count--;
         }
 
-        delete_timed_out_projectiles(projectiles);
+        delete_timed_out_bombs(bombs);
         delete_timed_out_missiles(missiles);
 
-        int num_projectiles2 = projectiles.size();
+        int num_bombs2 = bombs.size();
 
-        cout << "the num projs after deleting timed out ones: " << num_projectiles2 << endl;
+        cout << "the num projs after deleting timed out ones: " << num_bombs2 << endl;
 
 
         for (int i = 0; i < num_sock_ptrs; i++){
