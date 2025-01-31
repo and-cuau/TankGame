@@ -73,7 +73,6 @@ int item_positions[4][2] = {
         {9, 10}
 };
 
-
 char letters[4] = {'A', 'B', 'C', 'D'};
 
 class Tank{
@@ -86,7 +85,10 @@ Tank(char letter1, int j, int k){
 
 public:
 char letter;
+
 int health = 3, score;
+int num_bombs = 0;
+int num_missiles;
 int j;
 int k;
 Direction direction = Direction::STATIC;
@@ -103,11 +105,6 @@ void move_down();
 void move_left();
 void move_right();
 void move_switch();
-
-void attack_up();
-void attack_down();
-void attack_left();
-void attack_right();
 
 
 static std::vector<std::shared_ptr<boost::asio::ip::tcp::socket>> socket_ptrs;
@@ -188,12 +185,8 @@ int count = 0;
 int j, k;
 char letter;
 Direction direction = Direction::STATIC;
-void attack_up();
-void attack_down();
-void attack_left();
-void attack_right();
-void attack_right2();
-void attack_switch();
+void detonate_switch();
+void drop_switch();
 
 static Bomb * create_bomb(Direction direction, int j, int k){
     return new Bomb(direction, j, k);
@@ -214,15 +207,15 @@ int j, k;
 int direction;
 char letter;
 // Direction direction = Direction::STATIC;
-void attack_up();
-void attack_up_right();
-void attack_right();
-void attack_down_right();
-void attack_down();
-void attack_down_left();
-void attack_left();
-void attack_up_left();
-void attack_switch();
+void fly_up();
+void fly_up_right();
+void fly_right();
+void fly_down_right();
+void fly_down();
+void fly_down_left();
+void fly_left();
+void fly_up_left();
+void fly_switch();
 
 static Missile * create_missile(int direction, int j, int k){
     return new Missile(direction, j, k);
@@ -280,14 +273,13 @@ void Tank::move_up(){ // j = row. k = column
                 j--;
                 arena[j][k] = '!';
                 arena[j+1][k] = ' ';
-
+                num_bombs++;
                 items.at(i)->semaphore.release();
             }
         }
        }
      }
 }
-
 
 void Tank::move_down(){
     char downPos = arena[j+1][k];
@@ -309,7 +301,7 @@ void Tank::move_down(){
                     j++;
                     arena[j][k] = '!';
                     arena[j-1][k] = ' ';
-
+                    num_bombs++;
                     items.at(i)->semaphore.release();
                 }
             }
@@ -335,7 +327,7 @@ void Tank::move_left(){
                     k--;
                     arena[j][k] = '!';
                     arena[j][k+1] = ' ';
-
+                    num_bombs++;
                     items.at(i)->semaphore.release();
                 }
             }
@@ -364,7 +356,7 @@ void Tank::move_right(){
                     k++;
                     arena[j][k] = '!';
                     arena[j][k-1] = ' ';
-
+                    num_bombs++;
                     items.at(i)->semaphore.release();
                 }
             }
@@ -382,93 +374,88 @@ void Tank::cycle_turret_left(){
     Tank::set_direction();
 }
 
-void Bomb::attack_right(){
+void Bomb::detonate_switch(){
     if (count > 3){
         arena[j][k] = '*';
     } else if (count > 2){
        if (std::isalpha(arena[j-1][k])) { // Up
-    try {
-        tanks.at(charToInt(arena[j-1][k]))->health--;
-    } catch (const std::out_of_range& e) {
-        // Handle the out-of-bounds access, e.g., log the error or do nothing
-        std::cout << "Index out of bounds: " << e.what() << std::endl;
+            try {
+                tanks.at(charToInt(arena[j-1][k]))->health--;
+            } catch (const std::out_of_range& e) {
+                // Handle the out-of-bounds access, e.g., log the error or do nothing
+                std::cout << "Index out of bounds: " << e.what() << std::endl;
+            }
+    } else {
+        arena[j-1][k] = '%';
     }
-} else {
-    arena[j-1][k] = '%';
-}
-
-if (std::isalpha(arena[j-1][k+1])) { // UpRight
-    try {
-        tanks.at(charToInt(arena[j-1][k+1]))->health--;
-    } catch (const std::out_of_range& e) {
-        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    if (std::isalpha(arena[j-1][k+1])) { // UpRight
+        try {
+            tanks.at(charToInt(arena[j-1][k+1]))->health--;
+        } catch (const std::out_of_range& e) {
+            std::cout << "Index out of bounds: " << e.what() << std::endl;
+        }
+    } else {
+        arena[j-1][k+1] = '%';
     }
-} else {
-    arena[j-1][k+1] = '%';
-}
-
-if (std::isalpha(arena[j][k+1])) { // Right
-    try {
-        tanks.at(charToInt(arena[j][k+1]))->health--;
-    } catch (const std::out_of_range& e) {
-        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    if (std::isalpha(arena[j][k+1])) { // Right
+        try {
+            tanks.at(charToInt(arena[j][k+1]))->health--;
+        } catch (const std::out_of_range& e) {
+            std::cout << "Index out of bounds: " << e.what() << std::endl;
+        }
+    } else {
+        arena[j][k+1] = '%';
     }
-} else {
-    arena[j][k+1] = '%';
-}
 
-if (std::isalpha(arena[j+1][k+1])) { // DownRight
-    try {
-        tanks.at(charToInt(arena[j+1][k+1]))->health--;
-    } catch (const std::out_of_range& e) {
-        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    if (std::isalpha(arena[j+1][k+1])) { // DownRight
+        try {
+            tanks.at(charToInt(arena[j+1][k+1]))->health--;
+        } catch (const std::out_of_range& e) {
+            std::cout << "Index out of bounds: " << e.what() << std::endl;
+        }
+    } else {
+        arena[j+1][k+1] = '%';
     }
-} else {
-    arena[j+1][k+1] = '%';
-}
 
-if (std::isalpha(arena[j+1][k])) { // Down
-    try {
-        tanks.at(charToInt(arena[j+1][k]))->health--;
-    } catch (const std::out_of_range& e) {
-        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    if (std::isalpha(arena[j+1][k])) { // Down
+        try {
+            tanks.at(charToInt(arena[j+1][k]))->health--;
+        } catch (const std::out_of_range& e) {
+            std::cout << "Index out of bounds: " << e.what() << std::endl;
+        }
+    } else {
+        arena[j+1][k] = '%';
     }
-} else {
-    arena[j+1][k] = '%';
-}
 
-if (std::isalpha(arena[j+1][k-1])) { // DownLeft
-    try {
-        tanks.at(charToInt(arena[j+1][k-1]))->health--;
-    } catch (const std::out_of_range& e) {
-        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    if (std::isalpha(arena[j+1][k-1])) { // DownLeft
+        try {
+            tanks.at(charToInt(arena[j+1][k-1]))->health--;
+        } catch (const std::out_of_range& e) {
+            std::cout << "Index out of bounds: " << e.what() << std::endl;
+        }
+    } else {
+        arena[j+1][k-1] = '%';
     }
-} else {
-    arena[j+1][k-1] = '%';
-}
 
-if (std::isalpha(arena[j][k-1])) { // Left
-    try {
-        tanks.at(charToInt(arena[j][k-1]))->health--;
-    } catch (const std::out_of_range& e) {
-        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    if (std::isalpha(arena[j][k-1])) { // Left
+        try {
+            tanks.at(charToInt(arena[j][k-1]))->health--;
+        } catch (const std::out_of_range& e) {
+            std::cout << "Index out of bounds: " << e.what() << std::endl;
+        }
+    } else {
+        arena[j][k-1] = '%';
     }
-} else {
-    arena[j][k-1] = '%';
-}
 
-if (std::isalpha(arena[j-1][k-1])) { // UpLeft
-    try {
-        tanks.at(charToInt(arena[j-1][k-1]))->health--;
-    } catch (const std::out_of_range& e) {
-        std::cout << "Index out of bounds: " << e.what() << std::endl;
+    if (std::isalpha(arena[j-1][k-1])) { // UpLeft
+        try {
+            tanks.at(charToInt(arena[j-1][k-1]))->health--;
+        } catch (const std::out_of_range& e) {
+            std::cout << "Index out of bounds: " << e.what() << std::endl;
+        }
+    } else {
+        arena[j-1][k-1] = '%';
     }
-} else {
-    arena[j-1][k-1] = '%';
-}
-
-
-
     }
     else if (count > 1){
          arena[j-1][k] = ' ';
@@ -493,7 +480,7 @@ int num_tanks = tanks.size();
     return 'X';
 }
 
-void Missile::attack_up(){ // j = row. k = column   // 0
+void Missile::fly_up(){ // j = row. k = column   // 0
         cout << "bomb count: " << count << endl;
 
          if (count>0) {
@@ -526,7 +513,7 @@ void Missile::attack_up(){ // j = row. k = column   // 0
 
 }
 
-void Missile::attack_up_right(){ // j = row. k = column  // 1
+void Missile::fly_up_right(){ // j = row. k = column  // 1
         cout << "bomb count: " << count << endl;
 
         if (count>0) {
@@ -566,7 +553,7 @@ void Missile::attack_up_right(){ // j = row. k = column  // 1
        
 }
 
-void Missile::attack_right(){ // j = row. k = column    // 2
+void Missile::fly_right(){ // j = row. k = column    // 2
         cout << "bomb count: " << count << endl;
         
         if (count>0) {
@@ -595,7 +582,7 @@ void Missile::attack_right(){ // j = row. k = column    // 2
         }
 }
 
-void Missile::attack_down_right(){ // j = row. k = column // 3
+void Missile::fly_down_right(){ // j = row. k = column // 3
         cout << "DOWN RIGHT " << count << endl;
         
         if (count>0) {
@@ -633,7 +620,7 @@ void Missile::attack_down_right(){ // j = row. k = column // 3
 }
 
 
-void Missile::attack_down(){ // j = row. k = column // 4
+void Missile::fly_down(){ // j = row. k = column // 4
         cout << "bomb count: " << count << endl;
         
         if (count>0) {
@@ -664,7 +651,7 @@ void Missile::attack_down(){ // j = row. k = column // 4
         }
 }
 
-void Missile::attack_down_left(){ // j = row. k = column // 5
+void Missile::fly_down_left(){ // j = row. k = column // 5
         cout << "bomb count: " << count << endl;
         
         if (count>0) {
@@ -700,7 +687,7 @@ void Missile::attack_down_left(){ // j = row. k = column // 5
         }
 }
 
-void Missile::attack_left(){ // j = row. k = column // 6
+void Missile::fly_left(){ // j = row. k = column // 6
         cout << "bomb count: " << count << endl;
        
         if (count>0) {
@@ -730,7 +717,7 @@ void Missile::attack_left(){ // j = row. k = column // 6
         }
 }
 
-void Missile::attack_up_left(){ // j = row. k = column // 7
+void Missile::fly_up_left(){ // j = row. k = column // 7
         cout << "bomb count: " << count << endl;
         
         if (count>0) {
@@ -847,26 +834,25 @@ void Tank::obey_command(string message){
             direction = Direction::STATIC;
         } else if (message.find('f') != std::string::npos) {
             cout << "f received" << endl;
-            Bomb * proj = Bomb::create_bomb(direction, j, k);
-            proj->count = 10;
-            proj->attack_switch();
-            bombs.push_back(proj);
+            Bomb * bomb = Bomb::create_bomb(direction, j, k);
+            bomb->count = 10;
+            bomb->drop_switch();
+            bombs.push_back(bomb);
+            if (num_bombs > 0){
+                num_bombs--;
+            }
             direction = Direction::STATIC;
         } else {
             int msg_int = stoi(message);
             if (msg_int == 72) {
-               // Tank::move_up(arena);
                direction = Direction::UP;
             } else if (msg_int == 80) {
                 direction = Direction::DOWN;
-               // Tank::move_down(arena);
             } else if (msg_int == 75) {
                 direction = Direction::LEFT;
-               // Tank::move_left(arena);
             } else if (msg_int == 77) {
                 cout << "this shit happend idk why" << endl;
                 direction = Direction::RIGHT;
-               // Tank::move_right(arena);
             } else if (msg_int == 32){
                 cout << "space received" << endl;
             }
@@ -910,7 +896,7 @@ void Tank::handle_msgs(std::shared_ptr<tcp::socket> socket_ptr, int connect_num)
     socket_ptr->close();
 }
 
-void Bomb::attack_switch(){
+void Bomb::drop_switch(){
     switch(direction){
             case 0:
             j++;
@@ -929,31 +915,31 @@ void Bomb::attack_switch(){
         }
 } 
 
-void Missile::attack_switch(){
+void Missile::fly_switch(){
     switch(direction){
             case 0:
-            attack_up();
+            fly_down_right();
                 break;
             case 1:
-            attack_up_right();
+            fly_up_right();
                 break;
             case 2:
-            attack_right();
+            fly_right();
                 break;
             case 3:
-            attack_down_right();
+            fly_down_right();
                 break;
             case 4:
-            attack_down();
+            fly_down();
                 break;
             case 5:
-            attack_down_left();
+            fly_down_left();
                 break;
             case 6:
-            attack_left();
+            fly_left();
                 break;
             case 7:
-            attack_up_left();
+            fly_up_left();
                 break;
             default:
                 break;
@@ -977,7 +963,6 @@ void delete_timed_out_bombs(std::vector<Bomb*>& bombs){
     bombs.erase(it, bombs.end());
 
 }
-
 
 void delete_timed_out_missiles(std::vector<Missile*>& missiles){
 
@@ -1015,7 +1000,6 @@ void delete_dead_tanks(std::vector<Tank*>& tanks){
     tanks.erase(it, tanks.end());
 
 }
-
 
 void items_loop(){
     for(;;){
@@ -1057,14 +1041,14 @@ void game_loop(){
         int num_bombs = bombs.size();
 
         for (int i = 0; i < num_bombs; i++){
+            bombs.at(i)->detonate_switch();
             bombs.at(i)->count--;
-            bombs.at(i)->attack_right();
         }
 
         int num_missiles = missiles.size();
 
         for (int i = 0; i < num_missiles; i++){
-            missiles.at(i)->attack_switch();
+            missiles.at(i)->fly_switch();
             missiles.at(i)->count--;
         }
 
@@ -1093,7 +1077,6 @@ void game_loop(){
 
     }
 }
-
 
 using boost::asio::ip::tcp;
 int main(int argc, char* argv[]) { 
