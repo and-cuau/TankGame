@@ -86,7 +86,7 @@ Tank(char letter1, int j, int k){
 
 public:
 char letter;
-int health = 7, score;
+int health = 3, score;
 int j;
 int k;
 Direction direction = Direction::STATIC;
@@ -148,9 +148,17 @@ void set_letter(char letter){
 }
 
 void create_UI(){
-    const int livesPos =  5;
-    for (int i = 0; i < health; i++){
-        arena[0][livesPos + i] = 'H';
+     const int livesPos =  5;
+    const int messagePos = 9;
+    std::string message = "GAME OVER";
+    if (health > 0){
+        for (int i = 0; i < health; i++){
+            arena[0][livesPos + i] = 'H';
+        }
+    } else {
+        for (int i = 0; i < message.length(); i++){
+            arena[0][messagePos + i] = message[i];
+        }
     }
     set_direction();
 }
@@ -161,18 +169,6 @@ static Tank * create_tank(char letter, int j, int k){
 }
 
 };  // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS
-
-// Tank* findTankByLetter(char search_letter) {
-//     auto it = std::find_if(tanks.begin(), tanks.end(),
-//                            [search_letter](const Tank& t) { return t.letter == search_letter; });
-
-//     if (it != tanks.end()) {
-//         return &(*it);  // Return a pointer to the found Tank
-//     }
-
-//     return nullptr;  // Return nullptr if not found
-// }
-
 
 int charToInt(char c) {
     return std::toupper(c) - 'A';  // Convert to uppercase and map A = 1, B = 2, ...
@@ -505,7 +501,11 @@ void Missile::attack_up(){ // j = row. k = column   // 0
             if (std::isalpha(arena[j-1][k])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j-1][k]))->health--;
+                try {
+                    tanks.at(charToInt(arena[j-1][k]))->health--;
+                } catch (const std::out_of_range& e) {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                }
             }
             else if (arena[j-1][k] == '-' || arena[j-1][k] == '#'){
                 direction = 4;
@@ -534,7 +534,12 @@ void Missile::attack_up_right(){ // j = row. k = column  // 1
             if (std::isalpha(arena[j-1][k+1])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j-1][k+1]))->health--;
+
+                try {
+                    tanks.at(charToInt(arena[j-1][k+1]))->health--;
+                } catch (const std::out_of_range& e) {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                }
             } 
             else if (arena[j-1][k] == '-' || arena[j-1][k] == '#'){  // hits horizontal 
                 direction = 3;
@@ -568,7 +573,11 @@ void Missile::attack_right(){ // j = row. k = column    // 2
             if (std::isalpha(arena[j][k+1])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j][k+1]))->health--;
+                try {
+                    tanks.at(charToInt(arena[j][k+1]))->health--;
+                } catch (const std::out_of_range& e) {
+                     std::cerr << "Error: " << e.what() << std::endl;
+                }
             } 
             else if (arena[j][k+1] == '|' || arena[j][k+1] == '#'){
                 direction = 6;
@@ -595,7 +604,11 @@ void Missile::attack_down_right(){ // j = row. k = column // 3
             if (std::isalpha(arena[j+1][k+1])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j+1][k+1]))->health--;
+                try{
+                    tanks.at(charToInt(arena[j+1][k+1]))->health--;
+                }  catch (const std::out_of_range& e) {
+                     std::cerr << "Error: " << e.what() << std::endl;
+                }
             } 
             else if (arena[j+1][k] == '-' || arena[j+1][k] == '#'){
                 direction = 1;
@@ -628,7 +641,11 @@ void Missile::attack_down(){ // j = row. k = column // 4
             if (std::isalpha(arena[j+1][k])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j+1][k]))->health--;
+                try {
+                    tanks.at(charToInt(arena[j+1][k]))->health--;
+                } catch (const std::out_of_range& e) {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                }
             } 
             else if (arena[j+1][k] == '-' || arena[j+1][k] == '#'){
                 direction = 0;
@@ -654,7 +671,11 @@ void Missile::attack_down_left(){ // j = row. k = column // 5
             if (std::isalpha(arena[j+1][k-1])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j+1][k-1]))->health--;
+                try{
+                    tanks.at(charToInt(arena[j+1][k-1]))->health--;
+                } catch (const std::out_of_range& e) {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                }
             } 
             else if (arena[j+1][k-1] == '-' || arena[j+1][k-1] == '#'){
                 direction = 7;
@@ -686,7 +707,11 @@ void Missile::attack_left(){ // j = row. k = column // 6
             if (std::isalpha(arena[j][k-1])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j][k-1]))->health--;
+                try {
+                    tanks.at(charToInt(arena[j][k-1]))->health--;
+                } catch (const std::out_of_range& e) {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                } 
             } 
             else if (arena[j][k-1] == '|' || arena[j][k-1] == '#'){
                 direction = 2;
@@ -713,7 +738,11 @@ void Missile::attack_up_left(){ // j = row. k = column // 7
             if (std::isalpha(arena[j-1][k-1])) {
                 count = -1;
                 arena[j][k] = ' ';
-                tanks.at(charToInt(arena[j-1][k-1]))->health--;
+                try{
+                    tanks.at(charToInt(arena[j-1][k-1]))->health--;
+                } catch (const std::out_of_range& e) {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                }
             }
             else if (arena[j-1][k] == '-' || arena[j-1][k] == '#'){
                 direction = 5;
@@ -783,7 +812,7 @@ void testConnection(){
             Tank * tank = Tank::create_tank(letter, j, k);
             tanks.push_back(tank);
 
-            threads.push_back(std::thread([tank, socket_ptr, connect_num]() { // new method. uncomment after tests
+            threads.push_back(std::thread([tank, socket_ptr, connect_num]() { 
                tank->handle_msgs(socket_ptr, connect_num);
             }));
 
@@ -1090,9 +1119,9 @@ int main(int argc, char* argv[]) {
         items.push_back(item);
     }
 
-    thread game_thread(items_loop);
+    thread game_thread(game_loop);
 
-    thread test_sem(test_semaphore);
+    thread test_sem(items_loop);
    
     testConnection();
 
