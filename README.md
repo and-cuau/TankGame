@@ -1,5 +1,5 @@
 # Tank Game
-Tanks in C++. Use arrow keys to move tank up, down, left, right. Used 'A' and 'D' keys to rotate turret. Use 'W' to fire missile. Use 'F' to drop bomb. Objective is to eliminate enemy players.  Designed for demonstration purposes, the program currently supports multiplayer mode on a single computer.
+Tanks in C++. Use arrow keys to move tank up, down, left, right. Press 'A' and 'D' keys to rotate turret. Press 'W' key to fire missile. Press 'F' key to drop bomb. Objective is to eliminate enemy players.  Designed for demonstration purposes, the program currently supports multiplayer mode on a single computer.
 
 ## Prerequisites
 - C++ compiler (gcc, g++)
