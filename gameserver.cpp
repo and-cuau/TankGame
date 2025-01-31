@@ -168,7 +168,7 @@ static Tank * create_tank(char letter, int j, int k){
     return new Tank(letter, j, k);
 }
 
-};  // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS // END OF CLASS
+};  
 
 int charToInt(char c) {
     return std::toupper(c) - 'A';  // Convert to uppercase and map A = 1, B = 2, ...
@@ -782,8 +782,6 @@ void Tank::move_switch(){ // 8
                     move_right();
                 break;
             default:
-                    // cout << "test static" << endl;
-                    // arena[j][k] = letter;
                 break;
         }
 }
@@ -1056,8 +1054,6 @@ void game_loop(){
 
         int num_tanks = tanks.size();
 
-       //  cout << num_tanks << endl;
-
         int num_bombs = bombs.size();
 
         for (int i = 0; i < num_bombs; i++){
@@ -1069,12 +1065,6 @@ void game_loop(){
 
         for (int i = 0; i < num_missiles; i++){
             missiles.at(i)->attack_switch();
-            // for (int j = 0; j < num_tanks; j++){
-            //     if (missiles.at(i)->j == tanks.at(j)->j && missiles.at(i)->k == tanks.at(j)->k){
-            //         tanks.at(i)->health--;
-            //         //arena[tanks.at(j)->j][tanks.at(j)->k] = '%';
-            //     }
-            // }
             missiles.at(i)->count--;
         }
 
