@@ -239,7 +239,7 @@ Item(int j, int k){
 
 public:
 int j, k;
-std::counting_semaphore<1> semaphore{1};
+std::counting_semaphore<1> semaphore{2};
 
 static Item * create_item(int j, int k){
     return new Item(j, k);
