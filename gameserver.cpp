@@ -22,11 +22,9 @@ using namespace std;
 enum Direction {STATIC = -1, UP = 0, DOWN, LEFT, RIGHT};
 
 void testConnection(); 
-void access_item(int & j, int & k);
 
 // GLOBAL VARIABLES
 std::mutex mtx;
-// std::counting_semaphore<1> semaphore{1}; //max // initial
 int tank_num;
 const int ARENA_HEIGHT = 12; // 9/28 originally
 const int ARENA_WIDTH = 29;
@@ -50,8 +48,8 @@ char arena[ARENA_HEIGHT][ARENA_WIDTH] = {
     "                           ", //0
     "+-------------------------+", //1    
     "|                         |", //2
-    "| A      #                |", //3
-    "|  ! ###    B       ###   |", //4
+    "| A                       |", //3
+    "|    ###    B       ###   |", //4
     "|         ###             |", //5
     "|   $       #      C  #   |", //6
     "|                  $  #   |", //7
@@ -245,7 +243,7 @@ Item(int j, int k){
 
 public:
 int j, k;
-std::counting_semaphore<2> semaphore{0};
+std::counting_semaphore<1> semaphore{1};
 
 static Item * create_item(int j, int k){
     return new Item(j, k);
@@ -259,11 +257,11 @@ void unblink();
 
 
 void Item::blink(){
-    arena[j][k] = '$';
+    arena[j][k] = '-';
 }
 
 void Item::unblink(){
-    arena[j][k] = '-';
+    arena[j][k] = '$';
 }
 
 
@@ -276,29 +274,22 @@ void Tank::move_up(){ // j = row. k = column
             arena[j][k] = letter;
             arena[j+1][k] = ' ';
         } 
-        else if (upPos == '$'){
-           access_item(j, k);
+     else if (upPos == '$'){
+        int jmm = j - 1;
+        int num_items = items.size();
+        for (int i = 0; i < num_items; i++){
+            if (jmm == items.at(i)->j && k == items.at(i)->k){
+                items.at(i)->semaphore.acquire();
+
+                j--;
+                arena[j][k] = '!';
+                arena[j+1][k] = ' ';
+
+                items.at(i)->semaphore.release();
+            }
         }
+       }
      }
-}
-
-void access_item(int & j, int & k){
-    int num_items = items.size();
-
-    int jmm = j;
-
-    for (int i = 0; i < num_items; i++){
-        if (jmm == items.at(i)->j && k == items.at(i)->k){
-            items.at(i)->semaphore.acquire();
-
-            j--;
-            arena[j][k] = '*';
-            arena[j+1][k] = ' ';
-
-            items.at(i)->semaphore.release();
-        }
-
-    }
 }
 
 
@@ -313,14 +304,20 @@ void Tank::move_down(){
             arena[j-1][k] = ' ';
         }
         else if (downPos == '$'){
-            access_item(j,k);
-        } else if ( downPos == 'L') {
-            //semaphore.acquire();
-            j++;
-            arena[j][k] = '!'; 
-            arena[j-1][k] = ' ';
-            //semaphore.release();
-        }
+            int jpp = j + 1;
+            int num_items = items.size();
+            for (int i = 0; i < num_items; i++){
+                if (jpp == items.at(i)->j && k == items.at(i)->k){
+                    items.at(i)->semaphore.acquire();
+
+                    j++;
+                    arena[j][k] = '!';
+                    arena[j-1][k] = ' ';
+
+                    items.at(i)->semaphore.release();
+                }
+            }
+        } 
     }
 }
 void Tank::move_left(){
@@ -333,7 +330,19 @@ void Tank::move_left(){
             arena[j][k+1] = ' ';
         }
         else if (leftPos == '$'){
-            access_item(j,k);
+            int kmm = k - 1;
+            int num_items = items.size();
+            for (int i = 0; i < num_items; i++){
+                if (j == items.at(i)->j && kmm == items.at(i)->k){
+                    items.at(i)->semaphore.acquire();
+
+                    k--;
+                    arena[j][k] = '!';
+                    arena[j][k+1] = ' ';
+
+                    items.at(i)->semaphore.release();
+                }
+            }
         }
     }
 }
@@ -350,7 +359,19 @@ void Tank::move_right(){
             // }
         }
         else if(rightPos == '$'){
-              access_item(j,k);
+            int kpp = k + 1;
+            int num_items = items.size();
+            for (int i = 0; i < num_items; i++){
+                if (j == items.at(i)->j && kpp == items.at(i)->k){
+                    items.at(i)->semaphore.acquire();
+
+                    k++;
+                    arena[j][k] = '!';
+                    arena[j][k-1] = ' ';
+
+                    items.at(i)->semaphore.release();
+                }
+            }
         }
     }
 }
@@ -969,21 +990,23 @@ void delete_dead_tanks(std::vector<Tank*>& tanks){
 }
 
 
-
-void test_semaphore(){
+void items_loop(){
     for(;;){
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2200));
         //semaphore.acquire();
         int num_items = items.size();
 
+
         for (int i = 0; i < num_items; i++){
             items.at(i)->blink();
+            while(items.at(i)->semaphore.try_acquire());
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        
+        std::this_thread::sleep_for(std::chrono::milliseconds(2200));
+
         for (int i = 0; i < num_items; i++){
             items.at(i)->unblink();
+            items.at(i)->semaphore.release(1);
         }
         //semaphore.release();
     }
@@ -1067,7 +1090,7 @@ int main(int argc, char* argv[]) {
         items.push_back(item);
     }
 
-    thread game_thread(game_loop);
+    thread game_thread(items_loop);
 
     thread test_sem(test_semaphore);
    
