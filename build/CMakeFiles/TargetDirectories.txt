@@ -1,0 +1,4 @@
+C:/Users/andre/TankGame/build/CMakeFiles/gameserver.dir
+C:/Users/andre/TankGame/build/CMakeFiles/gameclient.dir
+C:/Users/andre/TankGame/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/andre/TankGame/build/CMakeFiles/ZERO_CHECK.dir

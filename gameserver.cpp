@@ -43,7 +43,7 @@ std::vector<Item*> items;
 
  // " N                         "
 //"+-------------------------+"
-//"                           "
+//"                           "co
 char arena[ARENA_HEIGHT][ARENA_WIDTH] = {
     "                           ", //0
     "+-------------------------+", //1    
@@ -58,6 +58,22 @@ char arena[ARENA_HEIGHT][ARENA_WIDTH] = {
     "|                         |",
     "+-------------------------\n"
 };
+
+// char arena[ARENA_HEIGHT][ARENA_WIDTH] = {
+//     "                           ", //0
+//     "+-------------------------+", //1    
+//     "|                         |", //2
+//     "| A                       |", //3
+//     "|    ###    B       ###   |", //4
+//     "|         ###             |", //5
+//     "|   $       #      C  #   |", //6
+//     "|                  $  #   |", //7
+//     "|       ###               |", //8
+//     "|  D      $      ##       |", //9
+//     "|                         |",
+//     "+-------------------------\n"
+// };
+
 
  int tank_positions[4][2] = {
         {3, 2}, // y, x
@@ -146,17 +162,26 @@ void set_letter(char letter){
 
 void create_UI(){
      const int livesPos =  5;
+     const int bombsPos =  10;
     const int messagePos = 9;
+
     std::string message = "GAME OVER";
     if (health > 0){
         for (int i = 0; i < health; i++){
             arena[0][livesPos + i] = 'H';
         }
+        if (num_bombs > 0){
+            for (int i = 0; i < num_bombs; i++){
+                arena[0][bombsPos + i] = 'B';
+            }
+        }
+
     } else {
         for (int i = 0; i < message.length(); i++){
             arena[0][messagePos + i] = message[i];
         }
     }
+
     set_direction();
 }
 
@@ -232,7 +257,7 @@ Item(int j, int k){
 
 public:
 int j, k;
-std::counting_semaphore<1> semaphore{2};
+std::counting_semaphore<1> semaphore{1};
 
 static Item * create_item(int j, int k){
     return new Item(j, k);
@@ -833,12 +858,12 @@ void Tank::obey_command(string message){
             this->cycle_turret_right();
             direction = Direction::STATIC;
         } else if (message.find('f') != std::string::npos) {
-            cout << "f received" << endl;
-            Bomb * bomb = Bomb::create_bomb(direction, j, k);
-            bomb->count = 10;
-            bomb->drop_switch();
-            bombs.push_back(bomb);
+            cout << "f received" << endl;        
             if (num_bombs > 0){
+                Bomb * bomb = Bomb::create_bomb(direction, j, k);
+                bomb->count = 10;
+                bomb->drop_switch();
+                bombs.push_back(bomb);
                 num_bombs--;
             }
             direction = Direction::STATIC;
@@ -918,7 +943,7 @@ void Bomb::drop_switch(){
 void Missile::fly_switch(){
     switch(direction){
             case 0:
-            fly_down_right();
+            fly_up();
                 break;
             case 1:
             fly_up_right();
@@ -1003,7 +1028,7 @@ void delete_dead_tanks(std::vector<Tank*>& tanks){
 
 void items_loop(){
     for(;;){
-        std::this_thread::sleep_for(std::chrono::milliseconds(2200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         //semaphore.acquire();
         int num_items = items.size();
 
@@ -1013,7 +1038,7 @@ void items_loop(){
             while(items.at(i)->semaphore.try_acquire());
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(2200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
         for (int i = 0; i < num_items; i++){
             items.at(i)->unblink();
@@ -1027,7 +1052,7 @@ void game_loop(){
     boost::system::error_code ignored_error;
    
     for(;;){
-        std::this_thread::sleep_for(std::chrono::milliseconds(800)); // was 1000
+        std::this_thread::sleep_for(std::chrono::milliseconds(600)); // was 800
         for (int i = 0; i < ARENA_HEIGHT; ++i) {
             std::cout << arena[i] << std::endl;
         }

@@ -1,0 +1,10 @@
+^C:\USERS\ANDRE\TANKGAME\BUILD\CMAKEFILES\22C3C22F2B8746F96DE145C188E66D1F\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/andre/TankGame -BC:/Users/andre/TankGame/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/andre/TankGame/build/TankGame.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
