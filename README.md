@@ -6,12 +6,12 @@ Tanks in C++. Use arrow keys to move tank up, down, left, right. Press 'A' and '
 - **Backend**: C++, Boost.Asio (TCP Sockets)
 
 
+# Installation
 ## Prerequisites
 - C++ compiler (gcc, g++)
 - Windows
 
 
-# Installation
 ## Download Boost
 1. Visit the Boost website: Go to the [Boost Downloads page](https://www.boost.org/users/download/).
 2. Download "boost_1_86_0.zip" zip file for Windows.
