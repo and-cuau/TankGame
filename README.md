@@ -1,9 +1,30 @@
-# LAN Tanks Game 
+# LAN Multiplayer Tanks Game
+
 Tanks in C++. Use arrow keys to move tank up, down, left, right. Press 'A' and 'D' keys to rotate turret. Press 'W' key to fire missile. Press 'F' key to drop bomb. Objective is to eliminate enemy players.  Designed for demonstration purposes, the program currently supports multiplayer mode on a single computer.
 
 
-## Technologies Used  
-- **Backend**: C++, Boost.Asio (TCP Sockets)
+## Technologies Used
+
+- **Backend**: C++, Boost.asio TCP sockets, std::thread, std:semaphore, std::mutex
+
+## Features & Functionality
+
+- **Routing**: Implements dynamic routing using React Router to navigate between different pages of the app.
+
+
+## Challenges & Solutions
+
+- **Challenge**: Flow child jobs are JavaScript objects that must be nested within eachother in order to execute sequentially. Data received from from client is not nested, but in an array.
+- **Solution**: Wrote recursive algorithm to accept array of objects and transform it into nested objects.
+- **Challenge**: Desired to track completion progress of seprate objectives via front end.
+- **Solution**: Integrated Chart.js bar chart component with Socket.io client socket configured to listen for updates from tasks running on backend.
+
+## Future Improvements
+
+
+
+
+
 
 
 # Installation
