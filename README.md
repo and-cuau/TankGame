@@ -5,19 +5,21 @@ Tanks in C++. Use arrow keys to move tank up, down, left, right. Press 'A' and '
 
 ## Technologies Used
 
-- **Backend**: C++, Boost.asio TCP sockets, std::thread, std:semaphore, std::mutex
+C++, Boost.asio TCP sockets, std::thread, std:semaphore, std::mutex
 
 ## Features & Functionality
 
-- **Routing**: Implements dynamic routing using React Router to navigate between different pages of the app.
-
+- **Object-Oriented Asset System**: Various game assets including tanks, bombs, missiles, and items are structured as objects.
+- **Dual-threaded Client**: Client generates two threads-- a thread for sending messages over TCP socket to server on user input and a thread for listening for game state sent continuously over TCP socket by server. Outputs received game state to terminal.
+- **Multithreaded TCP Socket Server**: Server dynamically generates threads each handling input dedicated connected client. Each thread loops indefinitely receiving data from corresponding client over TCP socket. This allows multiple clients to access board simultaneously and interact with each other. Server is able to handle 6+ connected clients.
+- **Semaphore-locked Resource Collection**: Items are locked by a semaphore allowing only two players to access an item concurrently.  
+- **Instance and Static Variables**: Classes have instance and static variables.
+- **Managed Socket Lifecycle**: Server hosts multiple sockets each dedicated to a client and each referenced by a shared pointer. Sockets are connected and eventually closed via shared pointer.
+- **Game Loop**: Game loop thread continuously handles game logic and updates game state. 
 
 ## Challenges & Solutions
-
-- **Challenge**: Flow child jobs are JavaScript objects that must be nested within eachother in order to execute sequentially. Data received from from client is not nested, but in an array.
-- **Solution**: Wrote recursive algorithm to accept array of objects and transform it into nested objects.
-- **Challenge**: Desired to track completion progress of seprate objectives via front end.
-- **Solution**: Integrated Chart.js bar chart component with Socket.io client socket configured to listen for updates from tasks running on backend.
+- **Challenge**: 
+- **Solution**: 
 
 ## Future Improvements
 
