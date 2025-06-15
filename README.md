@@ -11,7 +11,7 @@ C++, Boost.asio TCP sockets, std::thread, std:semaphore, std::mutex
 
 - **Object-Oriented Asset System**: Various game assets including tanks, bombs, missiles, and items are structured as objects.
 - **Dual-threaded Client**: Client generates two threads-- a thread for sending messages over TCP socket to server on user input and a thread for listening for game state sent continuously over TCP socket by server. Outputs received game state to terminal.
-- **Multithreaded TCP Socket Server**: Server dynamically generates threads each handling input dedicated connected client. Each thread loops indefinitely receiving data from corresponding client over TCP socket. This allows multiple clients to access board simultaneously and interact with each other. Server is able to handle 6+ connected clients.
+- **Multithreaded TCP Socket Server**: Server dynamically generates threads each handling input from dedicated connected client. Each thread loops indefinitely receiving data from corresponding client over TCP socket. This allows multiple clients to access board simultaneously and interact with each other. Server is able to handle 6+ connected clients.
 - **Semaphore-locked Resource Collection**: Items are locked by a semaphore allowing only two players to access an item concurrently.  
 - **Instance and Static Variables**: Classes have instance and static variables.
 - **Managed Socket Lifecycle**: Server hosts multiple sockets each dedicated to a client and each referenced by a shared pointer. Sockets are connected and eventually closed via shared pointer.
