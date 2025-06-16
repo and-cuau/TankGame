@@ -18,11 +18,8 @@ C++, Boost.asio TCP sockets, std::thread, std:semaphore, std::mutex
 - **Game Loop**: Game loop thread continuously handles game logic and updates game state. 
 
 ## Challenges & Solutions
-- **Challenge**: 
-- **Solution**: 
-
-## Future Improvements
-
+- **Challenge**: Needed a method of maintaining multiple sockets, each dedicated to handling a messages from a specific client, throughout their entire lifecycle.
+- **Solution**: Implemented vector of shared pointers. On each new connection from a client, a new shared pointer pointing to a new socket object is added to the vector.
 
 
 
